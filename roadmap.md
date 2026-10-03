@@ -151,19 +151,62 @@ Medium, still no graphics involved.
 
 ## Phase 3 — Seeing the game
 
-Large. Needs the Vulkan renderer in earnest.
+Large. Needs the Vulkan renderer in earnest. The first item is deliberately the smallest
+thing that proves the whole 3D pipeline; everything after it can lean on it.
 
-### 3.1 Map preview
-- [ ] Load map tiles, terrain and splines for a chosen map.
+### 3.1 `.o3d` mesh reader
+The first piece of real 3D, and the foundation for everything else here. The format is
+simple and documented:
 
-### 3.2 Route preview
-- [ ] Draw the chosen duty's path over the map, stop by stop.
+```
+84 19            magic
+ver              u8   (1,3,4,5,7 seen)
+[flags]          u8   (ver >= 3)  bit0: 32-bit triangle indices
+[key]            u32  (ver >= 4)
+sections, tagged by one byte, until EOF:
+  0x17 vertices  count × {x y z nx ny nz u v} f32
+  0x49 triangles count × {i0 i1 i2, material u16}
+  0x26 materials count × {diffuse rgba, specular rgb, emissive rgb, power, name}
+  0x79 matrix    16 × f32
+  0x54 bones     count × {name, weights}
+```
 
-### 3.3 Vehicle showroom
+- [ ] Parse the sections into plain vertex/index/material arrays. No GPU work yet.
+- [ ] Skinned and static meshes both, since the bones section is what makes wheels turn.
+- [ ] **Done when:** a bus's meshes parse and report a sane vertex count, with no Vulkan
+      involved — so it is testable without a graphics stack.
+
+### 3.2 Vehicle preview window
+The bus you picked, in a window you can spin. This is the item that makes the launcher
+feel like a launcher, and it is bigger than it looks:
+
+- [ ] **Orbit camera.** Drag to rotate, wheel to zoom. The 360 view the launcher is missing.
+- [ ] **Textures.** DDS (DXT1/3/5), TGA, BMP, PNG. This is most of the work — decoding is
+      straightforward, the file-count is not.
+- [ ] **`.bus` assembly.** Which meshes, which transform, which origin. The static subset
+      only: no scripts, no physics.
+- [ ] **Materials.** Start unlit or simple diffuse. The full material set (night maps,
+      reflections, bump, dynamic slots) is not needed to see a bus.
+- [ ] **Interaction.** Doors open/close, wheels turn, steering works. This is the part that
+      needs the bone hierarchy and is honestly the most expensive thing in this phase.
+
+**Order matters.** 3.1 first: it is small, testable without a GPU, and both 3.2 and the
+map work depend on it. A silhouette with an orbit camera is a genuine milestone and proves
+the pipeline before textures are the thing blocking you.
+
+### 3.3 Map and route preview
+Draw the map you are about to drive, with your duty's route over it.
+
+- [ ] Parse `.map` files — the splines and object placement (`omsi-scenery`'s job).
+- [ ] Draw roads as ribbons, the route highlighted, stops marked.
+- [ ] **This is a map browser, not a live GPS.** See 4.2: stock OMSI 2 does not expose the
+      player's position, so there is no live dot without a plugin.
+
+### 3.4 Vehicle showroom
 - [ ] Place the chosen bus on the map, under the sky and lighting of the chosen hour and
       weather.
 
-### 3.4 Live navigator
+### 3.5 Live navigator
 - [ ] The tilted map openOMSI draws into its own texture: road ribbons extruded in the
       vertex shader, per-lane congestion, signals, next stop.
 - [ ] Route progress following the bus lane by lane, Dijkstra on leaving the route.
@@ -208,7 +251,25 @@ reachable. (openOMSI is the reference: ~175k lines to reach it.)
 **What it can and cannot do.** It can change how the game *draws*. It cannot change how the
 game *thinks*, cannot make the game 64-bit, and cannot touch `Omsi.exe`.
 
-### 4.2 The 32-bit / 64-bit bridge (`omsi-plugin-host32`)
+### 4.2 The position channel (what a live GPS actually needs)
+
+**The problem this solves, stated once:** stock OMSI 2 has **no Lua**. `omsi.position()` —
+the call that returns `x, y, z, heading` — is an *openOMSI* addition. The stock DLL plugin
+interface exposes only script variables (`Velocity`, `IBIS_terminus_name`) and system
+variables (`Time`, `Weather_Temperature`). **Position is not among them.** So an
+out-of-process tool cannot know where the player is, no matter how well written.
+
+- [ ] A **minimal 32-bit plugin DLL** whose only job is to read position and forward it over
+      IPC. Nothing else lives in the game process.
+- [ ] Keep the payload tiny: one position and a heading per frame. The cost inside the game
+      is a few float copies; the cost outside is our problem.
+- [ ] `omsi::pe` already reads both architectures, which is what makes this checkable.
+- [ ] Then, and only then, 3.3 grows a live dot.
+
+**This is the honest reason to build 4.2 at all** — not speed, not a general plugin host, but
+one missing number. A general bridge would be the wrong tool; this is deliberately not one.
+
+### 4.3 The 32-bit / 64-bit bridge (`omsi-plugin-host32`)
 
 The one genuinely useful thing openOMSI does that we could copy. Its
 `omsi-plugin-host32.exe` is a **separate 32-bit process** that loads a `.opl`+DLL and answers
@@ -231,7 +292,7 @@ frame loop — the game keeps running 32-bit either way.
 (163 GiB of textures) memory is the ceiling, and no amount of IPC changes that. This is the
 item most likely to be the wrong call, which is why it is written down rather than started.
 
-### 4.3 Realistic performance levers, cheapest first
+### 4.4 Realistic performance levers, cheapest first
 - [ ] **Content tuning** — thinning what loads. Often beats every graphics idea combined on
       a heavy install, and it is supported: `Addons/` already exists in the install.
 - [ ] **LOD and texture budget** — the engine already has `_LOW` texture variants.
@@ -239,7 +300,7 @@ item most likely to be the wrong call, which is why it is written down rather th
       openOMSI uses in `omsi-plugin-host32.exe`: an x86 shim the game loads, forwarding to
       a 64-bit process over IPC. Only worth building once 4.0 says the CPU is the ceiling.
 
-**Note on 4.3's third item:** a 64-bit helper does real work outside the game's 2 GB, but
+**Note on 4.4's third item:** a 64-bit helper does real work outside the game's 2 GB, but
 it cannot make the *game's own loop* faster — the game still runs 32-bit. It pays off for
 compute the game delegates, not for work it keeps doing itself.
 
