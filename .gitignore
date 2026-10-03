@@ -1,0 +1,71 @@
+# Build output
+/out/
+/build/
+/dist/
+CMakeUserPresets.json
+CMakeLists.txt.user
+
+# FetchContent downloads
+/_deps/
+
+# Editors
+.vs/
+.vscode/
+.idea/
+*.user
+
+# Artefacts
+*.obj
+*.pdb
+*.ilk
+*.exe
+*.dll
+*.lib
+*.log
+
+# ---------------------------------------------------------------------------
+# OMSI 2 content must never be committed.
+#
+# This project reads a game installation to test its parsers. Nothing from one may end up
+# here: the formats are not ours, the content is not licensed for redistribution, and a
+# stray .bus or .dds would put someone's copy of a commercial game into a public
+# repository. The tests build synthetic content in a temporary folder instead.
+# ---------------------------------------------------------------------------
+*.bus
+*.ovh
+*.tram
+*.zug
+*.ttf        # TrueType in an install; NOT an OMSI timetable (those are .ttp/.ttl/.ttr)
+*.oft
+*.ttp
+*.ttl
+*.ttr
+*.hof
+*.dds
+*.o3d
+*.x
+*.surf
+*.trd
+*.map
+*.scenery
+*.psd
+*.pdn
+*.blend
+*.blend1
+*.skb
+*.cpt
+*.dtm
+*.prt
+*.otf
+*.envir
+
+# Archives that may hold mod content
+*.zip
+*.rar
+*.7z
+
+# The hold folder a clean writes to. Its whole purpose is to sit outside the
+# repository, but a stray --move-to . would otherwise land here.
+omsi-clean/
+quarantine/
+evigit-clean/

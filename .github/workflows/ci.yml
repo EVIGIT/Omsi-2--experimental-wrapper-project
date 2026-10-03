@@ -1,0 +1,77 @@
+# Continuous integration.
+#
+# The point of this file is that `ctest` actually runs. The Rust project this was modelled
+# on documents "cargo test --workspace must pass" in its CONTRIBUTING.md while its
+# workflows run three targeted tests; that gap is why it has hundreds of tests that are
+# never executed. Here the whole suite runs on every push and pull request.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  VULKAN_SDK: ${{ github.workspace }}/VulkanSDK
+
+jobs:
+  build:
+    runs-on: windows-2022
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the Vulkan SDK
+        uses: humbletim/install-vulkan-sdk@v1.4.1
+        with:
+          version: 1.4.363.0
+          cache: true
+
+      - uses: ilammy/msvc-dev-cmd@v1
+
+      - uses: actions/cache@v4
+        with:
+          path: out/build
+          key: build-${{ hashFiles('CMakeLists.txt', 'src/**', 'tests/**') }}
+          restore-keys: build-
+
+      - name: Configure
+        run: >
+          cmake -S . -B out/build/ci
+          -G "Visual Studio 17 2022" -A x64
+          -DOMSI_BUILD_RENDER=ON
+          -DOMSI_BUILD_TESTS=ON
+          -DOMSI_WERROR=ON
+
+      - name: Build
+        run: cmake --build out/build/ci --config Release --parallel
+
+      - name: Test
+        run: ctest --test-dir out/build/ci -C Release --output-on-failure
+
+      - name: The parser reads a stock-shaped installation
+        run: |
+          # Proves the CLI works end to end on a synthetic installation, so a regression in
+          # the install scan cannot pass the build.
+          $root = Join-Path $env:RUNNER_TEMP "OMSI 2"
+          New-Item -ItemType Directory -Force -Path "$root\Maps\Berlin" | Out-Null
+          New-Item -ItemType Directory -Force -Path "$root\Vehicles\MAN_SD200" | Out-Null
+          New-Item -ItemType File -Force -Path "$root\envir.cfg" | Out-Null
+          "[general]`nname Berlin" | Set-Content "$root\Maps\Berlin\global.cfg"
+          New-Item -ItemType File -Force -Path "$root\Vehicles\MAN_SD200\MAN_D92.bus" | Out-Null
+          & .\out\build\ci\bin\Release\evigit.exe $root
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: evigit-windows
+          path: out/build/ci/bin/Release/
+          if-no-files-found: error

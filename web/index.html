@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evigit &mdash; OMSI 2 launcher</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="bar">
+  <h1>evigit</h1>
+  <div class="root" id="root" title=""></div>
+  <div class="spacer"></div>
+  <div class="counts" id="counts"></div>
+  <button id="refresh" class="ghost" type="button">Reload</button>
+</header>
+
+<main>
+  <!-- Step 1: the map. Shown first because it decides what the rest contains. -->
+  <section class="step" id="step-map">
+    <h2><span class="num">1</span> Map</h2>
+    <div class="picker">
+      <ul class="list" id="maps" role="listbox" aria-label="Maps"></ul>
+      <div class="detail" id="map-detail">
+        <p class="placeholder">Choose a map.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Step 2: the bus. -->
+  <section class="step" id="step-bus">
+    <h2><span class="num">2</span> Bus</h2>
+    <div class="picker">
+      <div class="list-wrap">
+        <input type="search" id="bus-filter" class="filter" placeholder="Filter&hellip;"
+               autocomplete="off" spellcheck="false" aria-label="Filter vehicles">
+        <ul class="list" id="buses" role="listbox" aria-label="Vehicles"></ul>
+      </div>
+      <div class="detail" id="bus-detail">
+        <p class="placeholder">Choose a bus.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Step 3: the duty. Filtered to what the chosen bus's manufacturer actually runs. -->
+  <section class="step" id="step-duty">
+    <h2><span class="num">3</span> Duty</h2>
+    <div class="picker">
+      <ul class="list" id="duties" role="listbox" aria-label="Duties"></ul>
+      <div class="detail" id="duty-detail">
+        <p class="placeholder">Choose a duty.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- The summary is always visible: it is the answer to "what did I just choose". -->
+<footer class="summary" id="summary">
+  <div class="chosen" id="chosen">
+    <span class="slot" data-step="map"><b>Map</b><i>&mdash;</i></span>
+    <span class="slot" data-step="bus"><b>Bus</b><i>&mdash;</i></span>
+    <span class="slot" data-step="duty"><b>Duty</b><i>&mdash;</i></span>
+  </div>
+  <button id="start" type="button" disabled>Start</button>
+</footer>
+
+<!-- Shown instead of the page when the server could not be reached or the payload is
+     not usable. A launcher that fails silently is worse than one that says why. -->
+<div class="overlay" id="overlay" hidden>
+  <div class="card">
+    <h3 id="overlay-title">Something went wrong</h3>
+    <p id="overlay-text"></p>
+    <pre id="overlay-detail" hidden></pre>
+    <button type="button" onclick="location.reload()">Try again</button>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+# Keep it close to LLVM's style; MSVC and clang-format both read this.
+BasedOnStyle: Google
+ColumnLimit: 100
+IndentWidth: 4
+AccessModifierOffset: -4
+DerivePointerAlignment: false
+PointerAlignment: Left
+AllowShortFunctionsOnASingleLine: Inline
+SpaceBeforeParens: ControlStatements
