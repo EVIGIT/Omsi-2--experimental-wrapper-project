@@ -428,6 +428,26 @@ TEST_CASE("the profile sums files, textures and per-map weight") {
     CHECK(p.problems.empty());
 }
 
+TEST_CASE("the texture budget is read from options.cfg") {
+    const TempDir dir;
+    dir.write("envir.cfg", "[general]\n");
+    dir.write("options.cfg", "[general]\n\n[maxFPS]\n200\n\n[texmemlimit]\n1001.0\n");
+
+    const auto limit = omsi::content::textureMemoryLimit(dir.path());
+    REQUIRE(limit.has_value());
+    CHECK(*limit == 1001.0);
+}
+
+TEST_CASE("a missing or unreadable texture budget is not an error") {
+    const TempDir dir;
+    dir.write("envir.cfg", "[general]\n");
+    CHECK_FALSE(omsi::content::textureMemoryLimit(dir.path()).has_value());
+
+    // The key is present but its value is not a number.
+    dir.write("options.cfg", "[texmemlimit]\nnot a number\n");
+    CHECK_FALSE(omsi::content::textureMemoryLimit(dir.path()).has_value());
+}
+
 TEST_CASE("the profile reports a folder it cannot read rather than throwing") {
     const TempDir dir;
     const auto p = omsi::content::profile(dir.path() / "does-not-exist");

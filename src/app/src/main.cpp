@@ -431,11 +431,28 @@ int main(int argc, char** argv) {
         if (const auto& image = library.gameImage()) {
             std::cout << "Game\n";
             reportImage(*image);
+
+            const auto texLimit = omsi::content::textureMemoryLimit(root);
+
             if (image->valid && !image->is64Bit() && !image->largeAddressAware()) {
-                std::cout
-                    << "  This build is 32-bit and is limited to 2 GB of address space.\n"
-                    << "  Setting the large-address-aware flag would raise that to 4 GB.\n"
-                    << "  evigit does not change the file; a game update would undo it anyway.\n\n";
+                std::cout << "  This build is 32-bit and is limited to 2 GB of address space.\n";
+                if (texLimit) {
+                    std::cout << std::format(
+                        "  options.cfg asks for {:.0f} MB of texture memory ({:.1f} GB). With\n"
+                        "  2 GB to hold it that budget is never met, so the game keeps\n"
+                        "  lowering distant textures and streaming them back in.\n"
+                        "  Setting the large-address-aware flag raises the process to 4 GB,\n"
+                        "  which is what makes a larger budget usable - the two are the same\n"
+                        "  setting, not two problems.\n",
+                        *texLimit, *texLimit / 1024.0);
+                }
+                std::cout << "  evigit does not change the file, and a game update would clear\n"
+                             "  it again. The patch that does it ships with the game as\n"
+                             "  4gb_patch.exe; this only tells you where you stand.\n\n";
+            } else if (texLimit) {
+                std::cout << std::format(
+                    "  texture budget  {:.0f} MB ({:.1f} GB) from options.cfg\n",
+                    *texLimit, *texLimit / 1024.0);
             }
         }
 

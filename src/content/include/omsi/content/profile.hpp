@@ -48,6 +48,11 @@ struct VolumeStat {
     std::uint64_t freeBytes = 0;
 };
 
+// The texture budget in MB, when options.cfg states one. Reported beside the image because
+// the number is meaningless on its own: what matters is how much of it the process can
+// actually hold, and that is set by the large-address-aware flag.
+std::optional<double> textureMemoryLimit(const std::filesystem::path& root);
+
 struct Profile {
     std::uint64_t totalFiles = 0;
     std::uint64_t totalBytes = 0;

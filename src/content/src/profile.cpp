@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cctype>
 #include <format>
+#include <fstream>
 
 #include <windows.h>
 
@@ -124,6 +125,44 @@ std::string gib(std::uint64_t bytes) {
 }
 
 }  // namespace
+
+// Reads OMSI's [texmemlimit] from options.cfg: the texture memory in MB above which the
+// game lowers the resolution of distant textures. Stock is 401; the value is meaningless
+// without also knowing how much address space the process has, so it is reported next to
+// the image rather than on its own.
+//
+// Public, so it lives outside the anonymous namespace above.
+std::optional<double> textureMemoryLimit(const std::filesystem::path& root) {
+    std::ifstream in(root / "options.cfg", std::ios::binary);
+    if (!in) {
+        return std::nullopt;
+    }
+
+    std::string line;
+    while (std::getline(in, line)) {
+        // A block keyword on its own line. Compared as a whole trimmed line so that a
+        // longer keyword cannot match this one.
+        while (!line.empty() &&
+               (line.back() == '\r' || line.back() == ' ' || line.back() == '\t')) {
+            line.pop_back();
+        }
+        const auto first = line.find_first_not_of(" \t");
+        if (first == std::string::npos || line.substr(first) != "[texmemlimit]") {
+            continue;
+        }
+        // The value is the next line: OMSI writes one parameter per line, and an empty line
+        // is a legal empty parameter rather than the end of the block.
+        if (!std::getline(in, line)) {
+            return std::nullopt;
+        }
+        try {
+            return std::stod(line);
+        } catch (const std::exception&) {
+            return std::nullopt;
+        }
+    }
+    return std::nullopt;
+}
 
 std::string Profile::verdict() const {
     // The thresholds are deliberately rough. A verdict here is a hypothesis to test, and
