@@ -30,8 +30,11 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install the Vulkan SDK
-        uses: humbletim/install-vulkan-sdk@v1.4.1
+        uses: humbletim/install-vulkan-sdk@v1.2
         with:
+          # The action is at v1.2; the SDK it installs is a separate version. These were
+          # once the same number, which is how this ended up pinned to a tag that does not
+          # exist and failed every run before CMake was even reached.
           version: 1.4.363.0
           cache: true
 

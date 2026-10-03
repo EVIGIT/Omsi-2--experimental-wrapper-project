@@ -65,13 +65,17 @@ Needs **Visual Studio 2022 or newer** with the C++ build tools, **CMake 3.28+** 
 that ships with Visual Studio is fine) and, for the renderer, the **Vulkan SDK**.
 
 ```powershell
-cmake -S . -B out/build/x64-debug -G "Visual Studio 18 2026" -A x64
+cmake -S . -B out/build/x64-debug -G "Visual Studio 17 2022" -A x64
 cmake --build out/build/x64-debug --config Debug
 ctest --test-dir out/build/x64-debug -C Debug --output-on-failure
 ```
 
 There are presets for this too: `cmake --preset x64-debug`, `cmake --build --preset x64-debug`,
 `ctest --preset test`.
+
+The presets use the **Visual Studio 17 2022** generator, which is what CI uses and what is
+present on a machine with Visual Studio 2022. A newer Visual Studio works with it. Override
+with `-G "Visual Studio 18 2026"` if you have a preview that needs it.
 
 ### Options
 

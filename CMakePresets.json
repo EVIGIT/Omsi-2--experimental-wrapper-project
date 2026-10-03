@@ -9,7 +9,7 @@
     {
       "name": "base",
       "hidden": true,
-      "generator": "Visual Studio 18 2026",
+      "generator": "Visual Studio 17 2022",
       "architecture": "x64",
       "binaryDir": "${sourceDir}/out/build/${presetName}",
       "installDir": "${sourceDir}/out/install/${presetName}",
