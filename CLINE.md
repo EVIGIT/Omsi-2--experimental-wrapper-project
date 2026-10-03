@@ -3,6 +3,90 @@
 Working notes for this project. Read this first in a new session: the project state is on
 disk, but these are the things that are *not* written down anywhere else.
 
+## Start here, in this order
+
+1. **This file** — how to work in this environment, and what the traps are.
+2. **`roadmap.md`** — the plan, ordered easiest first, with the reasoning for each phase.
+   Read it before proposing work. It holds the four hard constraints and the honest scoping
+   of every phase, including which items are deliberately *not* scheduled.
+3. **`git log --oneline`, then the commit bodies** — 9 commits, each recording what broke
+   and why. Most of the design rationale lives here rather than in the code.
+
+Nothing else needs reading before starting. Do not re-derive the state from the source.
+
+## How Cline loads this file
+
+Cline reads a **`.clinerules/` directory** automatically at session start; it does not load
+a file named `CLINE.md` on its own. `.clinerules/CLINE.md` is a pointer to this file so that
+the notes are picked up without anyone having to remember to ask for them.
+
+If that pointer is ever missing, ask for this file by name before doing anything else — the
+operational notes in it are worth more than any single task.
+
+## Status
+
+Last updated at the end of Phase 1 task 1.1.
+
+### Complete
+
+| Item | Verified by |
+|---|---|
+| **1.1 CMake presets and CI** | `cmake --preset`, `--build --preset`, `ctest --preset` green locally; both CI runs green |
+| **1.9 Installation profile** | `evigit --profile` → 190.92 GiB, verdict: memory-bound |
+| **1.8 Audit and clean** | `evigit --audit`, `--clean`, `--restore`; round-trip tested on a synthetic install |
+| **PE inspection** (part of 1.7) | `evigit --image`; 12 tests including malformed input |
+| Timetable scanning | `.ttp`/`.ttl`/`.ttr` in `maps/<Map>/` — 2022 found on the real install |
+| Web front end | 3 cascading pickers, 2022 timetables served over loopback |
+
+**Tests: 91 cases, 317 assertions, all passing.** Run with `ctest --preset test` or
+`out\build\x64-local\bin\Release\omsi_tests.exe`.
+
+### Not complete, and worth knowing why
+
+- **1.2 Duty engine** — the duty list is still filename-matched, so it shows wrong duties
+  and misses real ones. This is the biggest functional gap in the launcher.
+- **1.3 Station names** — station IDs (`382211`) are shown, not names.
+- **1.4 Native window** — the launcher still opens in a browser. WebView2 is installed on
+  this machine (v154.0.4258.53), and `WebView2Loader.dll` still needs fetching.
+- **1.5 Launching** — **Start does nothing.** It is a placeholder.
+- **1.7 in the window** — the PE report and the `texmemlimit` advisory exist in the CLI
+  only; `/api/library` does not expose them.
+- **1.6 Remember selection** — not started.
+
+### Next
+
+**Roadmap 3.1, the `.o3d` mesh reader.** First milestone is **silhouette + orbit camera**:
+parse the meshes, render untextured, drag to rotate and wheel to zoom. It needs no GPU for
+the parsing half, so it is testable the way everything else here has been.
+
+Before that, Phase 1's unfinished items are worth finishing first — 1.2 and 1.5 in
+particular, since they are what makes the launcher usable rather than merely correct.
+
+### CI status — green
+
+Both runs after the 1.1 fixes passed:
+
+```
+success  Add CLINE.md: the operational notes that are not in the code
+success  Split the Vulkan renderer out of the blocking CI job
+```
+
+Three bugs were in the way, and only the first was visible in the code:
+
+1. `CMakePresets.json` named `Visual Studio 18 2026`, a preview generator absent from most
+   machines, so every preset failed.
+2. CI pinned `humbletim/install-vulkan-sdk@v1.4.1`; the action's newest tag is **v1.2**, so
+   every run died during setup before CMake ran. The action version and the SDK version it
+   installs had been written as one number.
+3. `find_package(Vulkan)` still failed on the runner afterwards, so the renderer moved into
+   its own `continue-on-error` job. The main job builds and tests what has tests.
+
+Two lessons from that: **a 7-second CI failure is a setup failure, not a build failure** —
+read the log rather than guessing; and the Vulkan renderer is the one part of the project
+with no tests, so it should not be able to block every push.
+
+---
+
 ## The environment lies about command results
 
 **`run_commands` here routinely returns "error" / "exit code 1" for commands that actually
