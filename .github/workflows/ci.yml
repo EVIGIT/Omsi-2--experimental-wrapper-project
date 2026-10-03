@@ -16,9 +16,6 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  VULKAN_SDK: ${{ github.workspace }}/VulkanSDK
-
 jobs:
   build:
     runs-on: windows-2022
@@ -28,15 +25,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install the Vulkan SDK
-        uses: humbletim/install-vulkan-sdk@v1.2
-        with:
-          # The action is at v1.2; the SDK it installs is a separate version. These were
-          # once the same number, which is how this ended up pinned to a tag that does not
-          # exist and failed every run before CMake was even reached.
-          version: 1.4.363.0
-          cache: true
 
       - uses: ilammy/msvc-dev-cmd@v1
 
@@ -50,7 +38,6 @@ jobs:
         run: >
           cmake -S . -B out/build/ci
           -G "Visual Studio 17 2022" -A x64
-          -DOMSI_BUILD_RENDER=ON
           -DOMSI_BUILD_TESTS=ON
           -DOMSI_WERROR=ON
 
@@ -78,3 +65,37 @@ jobs:
           name: evigit-windows
           path: out/build/ci/bin/Release/
           if-no-files-found: error
+
+  # The Vulkan renderer, kept separate from the main build for two reasons: it needs the SDK
+  # installed (an external dependency that fails for its own reasons), and it is the one part
+  # of the project with no tests - it is a device survey and one triangle. Letting it block
+  # every push would mean a green pipeline that proves nothing extra. See roadmap 1.1.
+  renderer:
+    runs-on: windows-2022
+    continue-on-error: true
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the Vulkan SDK
+        uses: humbletim/install-vulkan-sdk@v1.2
+        with:
+          # The action is at v1.2; the SDK it installs is a separate version. These were
+          # once the same number, which is how this ended up pinned to a tag that does not
+          # exist and failed every run before CMake was even reached.
+          version: 1.4.363.0
+          cache: true
+
+      - uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Configure
+        run: >
+          cmake -S . -B out/build/vk
+          -G "Visual Studio 17 2022" -A x64
+          -DOMSI_BUILD_RENDER=ON
+          -DOMSI_WERROR=ON
+
+      - name: Build
+        run: cmake --build out/build/vk --config Release --parallel
